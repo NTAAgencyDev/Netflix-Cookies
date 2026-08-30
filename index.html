@@ -133,6 +133,44 @@
       cursor: pointer;
       font-size: 11px;
     }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+    .status-active { background: #1a4a1a; color: #4ade80; }
+    .status-burned { background: #4a1a4a; color: #c77dff; }
+    .status-expired { background: #4a3a1a; color: #fbbf24; }
+    .status-revoked { background: #4a1a1a; color: #ff8888; }
+    .key-detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #6b6b6b;
+      margin-top: 4px;
+    }
+    .key-detail-row strong { color: #a3a3a3; }
+    .pagination-btn {
+      background: #2a2a2a;
+      color: #FFD700;
+      border: 1px solid #3a3a3a;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .pagination-btn:hover:not(:disabled) {
+      background: #3a3a3a;
+      border-color: #FFD700;
+    }
+    .pagination-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -185,16 +223,27 @@
     </div>
 
     <div class="card">
-      <h2>📋 Danh sách Key đã tạo (Local)</h2>
-      <div class="key-list" id="keyList"></div>
-    </div>
-
-    <div class="card" id="recoveryCard" style="display:none;">
-      <h2>🆘 Recovery Codes (Single-Use Keys)</h2>
-      <div class="info" style="margin-bottom: 12px;">
-        Gửi key + recovery code cho khách. Khi khách format máy, họ dùng recovery code để reset device. Mỗi recovery code chỉ dùng được <strong>1 lần duy nhất</strong>.
+      <h2>📋 Quản lý Key (Google Sheet)</h2>
+      <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select id="filterKeyType" style="flex:1;min-width:120px;">
+          <option value="">Tất cả loại</option>
+          <option value="multi">🔄 Multi</option>
+          <option value="single">🔥 Single</option>
+          <option value="single-once">💀 One-Shot</option>
+        </select>
+        <select id="filterStatus" style="flex:1;min-width:120px;">
+          <option value="">Tất cả trạng thái</option>
+          <option value="active">🟢 Active</option>
+          <option value="burned">💀 Burned</option>
+          <option value="expired">⏰ Expired</option>
+          <option value="revoked">🚫 Revoked</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="🔍 Tìm key hoặc ghi chú..." style="flex:2;min-width:180px;">
+        <button class="btn" id="refreshBtn" onclick="loadKeys()" style="padding:8px 16px;font-size:12px;">🔄 Làm mới</button>
       </div>
-      <div class="key-list" id="recoveryList"></div>
+      <div id="listInfo" style="font-size:12px;color:#6b6b6b;margin-bottom:12px;text-align:right;"></div>
+      <div class="key-list" id="keyList" style="max-height:500px;"></div>
+      <div id="pagination" style="display:flex;justify-content:center;gap:8px;margin-top:12px;"></div>
     </div>
   </div>
 

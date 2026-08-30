@@ -1,5 +1,4 @@
-// NTA Shop Premium - Admin v3.2 (with Single-Use-Only Key)
-const STORAGE_KEY = 'nta_generated_keys';
+// NTA Shop Premium - Admin v3.3 (Sheet-based management, delete-on-revoke)
 const ADMIN_SECRET_KEY = 'nta_admin_secret';
 const API_URL = 'https://script.google.com/macros/s/AKfycbwCDI2Q2oKKP2cHTc_qdLoPtC-YIXBn0k6YkCFSvdBZcLeFBZdNMfgrXZoY45Duegtxow/exec';
 
@@ -22,6 +21,12 @@ function getDurationMs(d) {
 function formatExp(t) {
   if (!t) return 'Vĩnh viễn';
   return new Date(t).toLocaleDateString('vi-VN');
+}
+
+function formatDate(t) {
+  if (!t) return '-';
+  const d = new Date(t);
+  return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 }
 
 let cbId = 0;
@@ -135,15 +140,11 @@ async function generateKeys() {
       const kd = {
         key,
         keyType: r.keyType || keyType,
-        recoveryCode: r.recoveryCode || '',  // ← LƯU recovery code từ server
-        createdAt: Date.now(),
+        recoveryCode: r.recoveryCode || '',
         expiresAt: durMs ? Date.now() + durMs : null,
         duration: dur,
         note
       };
-      const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      arr.push(kd);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
       newKeys.push(kd);
       ok++;
     } else {
@@ -158,8 +159,9 @@ async function generateKeys() {
   isGenerating = false; // Reset flag
 
   showNewKeys(newKeys);
-  renderList();
-  renderRecoveryList();  // ← Render recovery list nếu có single-use key
+  // Sau khi tạo xong, refresh danh sách từ Google Sheet
+  currentPage = 0;
+  loadKeys();
 
   // Alert khác nhau cho multi/single/single-once
   if (keyType === 'single-once' && ok > 0) {
@@ -206,83 +208,179 @@ function showNewKeys(keys) {
   c.innerHTML = h;
 }
 
-function cp(key) {
-  navigator.clipboard.writeText(key).then(() => alert('Đã copy:\n' + key)).catch(() => {
-    const t = document.createElement('textarea'); t.value = key; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
-    alert('Đã copy:\n' + key);
+function cp(text) {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    console.log('Copied:', text);
+  }).catch(() => {
+    const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
   });
 }
 
 async function doRevoke(key) {
-  if (!confirm('Thu hồi ' + key + '?')) return;
+  if (!confirm('🗑 Thu hồi và XOÁ VĨNH VIỄN key:\n' + key + '\n\nHành động này không thể hoàn tác!')) return;
   const s = getSecret(); if (!s) return;
   const r = await revokeKey(key, s);
-  alert(r && r.valid ? 'Đã thu hồi!' : 'Lỗi: ' + (r ? r.message : '?'));
+  if (r && r.valid) {
+    alert('✅ ' + r.message);
+    currentPage = 0;
+    loadKeys();
+  } else {
+    alert('❌ Lỗi: ' + (r ? r.message : 'unknown'));
+  }
 }
 
 function clearAll() {
-  if (confirm('Xóa danh sách local?')) {
-    localStorage.removeItem(STORAGE_KEY);
-    document.getElementById('generatedKeys').innerHTML = '';
-    renderList();
+  document.getElementById('generatedKeys').innerHTML = '';
+  alert('Đã xóa danh sách key mới tạo trên màn hình.\n(Danh sách key trong Google Sheet vẫn nguyên.)');
+}
+
+// ============================================
+// v3.3: QUẢN LÝ KEY TỪ GOOGLE SHEET
+// ============================================
+let currentPage = 0;
+const PAGE_SIZE = 20;
+let currentFilters = { keyType: '', status: '', search: '' };
+
+async function loadKeys() {
+  const secret = getSecret();
+  if (!secret) return;
+
+  const btn = document.getElementById('refreshBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tải...'; }
+
+  currentFilters = {
+    keyType: document.getElementById('filterKeyType').value,
+    status: document.getElementById('filterStatus').value,
+    search: document.getElementById('searchInput').value.trim()
+  };
+
+  try {
+    const r = await jsonp({
+      action: 'list',
+      keyType: currentFilters.keyType,
+      status: currentFilters.status,
+      search: currentFilters.search,
+      limit: PAGE_SIZE,
+      offset: currentPage * PAGE_SIZE,
+      adminSecret: secret
+    });
+
+    if (r && r.valid) {
+      renderKeyList(r);
+      renderPagination(r);
+      const totalPages = Math.max(1, Math.ceil(r.total / PAGE_SIZE));
+      document.getElementById('listInfo').textContent =
+        `Tổng: ${r.total} key` + (r.totalAll !== r.total ? ` / ${r.totalAll} toàn bộ` : '') +
+        ` | Trang ${currentPage + 1}/${totalPages}`;
+    } else {
+      alert('Lỗi: ' + (r ? r.message : 'unknown'));
+      if (r && r.message === 'Unauthorized') {
+        localStorage.removeItem(ADMIN_SECRET_KEY);
+      }
+    }
+  } catch (e) {
+    alert('Lỗi tải danh sách: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Làm mới'; }
   }
 }
 
-function renderList() {
-  const keys = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+function renderKeyList(r) {
   const l = document.getElementById('keyList');
-  if (!keys.length) { l.innerHTML = '<p style="color:#6b6b6b;text-align:center;padding:20px;">Chưa có key.</p>'; return; }
-  let h = '';
-  for (let i = keys.length - 1; i >= 0; i--) {
-    const k = keys[i];
-    const hasRecovery = k.keyType === 'single' || k.keyType === 'single-once';
-    const badge = getBadge(k.keyType, 'sm');
-    const recoveryColor = k.keyType === 'single-once' ? '#c77dff' : '#ff8888';
-
-    h += '<div class="key-item"><div style="flex:1;"><div class="key-text">' + k.key + badge + '</div>' +
-      (hasRecovery && k.recoveryCode ? '<div class="key-meta" style="color:' + recoveryColor + ';">🆘 ' + k.recoveryCode + '</div>' : '') +
-      '<div class="key-meta">' + formatExp(k.expiresAt) + ' • ' + k.note + '</div></div>' +
-      '<button class="copy-btn" onclick="cp(\'' + k.key + '\')">Copy</button>' +
-      (hasRecovery && k.recoveryCode ? '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')" style="margin-left:4px;">🆘</button>' : '') +
-      '<button class="copy-btn" style="background:#5a1a1a;color:#ff8888;margin-left:4px;" onclick="doRevoke(\'' + k.key + '\')">Thu hồi</button></div>';
-  }
-  l.innerHTML = h;
-}
-
-// Render riêng danh sách recovery codes cho single-use key (cả single và single-once)
-function renderRecoveryList() {
-  const keys = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  const recoveryKeys = keys.filter(k => (k.keyType === 'single' || k.keyType === 'single-once') && k.recoveryCode);
-  const card = document.getElementById('recoveryCard');
-  const l = document.getElementById('recoveryList');
-
-  if (recoveryKeys.length === 0) {
-    card.style.display = 'none';
+  if (!r.keys.length) {
+    l.innerHTML = '<p style="color:#6b6b6b;text-align:center;padding:30px;">📭 Không có key nào.</p>';
     return;
   }
-  card.style.display = 'block';
 
   let h = '';
-  for (let i = recoveryKeys.length - 1; i >= 0; i--) {
-    const k = recoveryKeys[i];
-    const isOnce = k.keyType === 'single-once';
-    const borderColor = isOnce ? '#9d4edd' : '#ff6b6b';
-    const codeColor = isOnce ? '#c77dff' : '#ff6b6b';
-    const typeLabel = isOnce ? '💀 ONE-SHOT' : '🔥 SINGLE';
+  r.keys.forEach(k => {
+    const badge = getBadge(k.keyType, 'sm');
+    const hasRecovery = (k.keyType === 'single' || k.keyType === 'single-once') && k.recoveryCode;
+    const recoveryColor = k.keyType === 'single-once' ? '#c77dff' : '#ff8888';
+    const recoveryUsed = k.recoveryUsedAt ? ' <span style="color:#fbbf24;">(đã dùng)</span>' : '';
 
-    h += '<div class="key-item" style="border-left:3px solid ' + borderColor + ';">' +
-      '<div style="flex:1;">' +
-      '<div style="color:#6b6b6b;font-size:11px;margin-bottom:2px;">' +
-      '<span style="background:' + borderColor + ';color:#000;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-right:6px;">' + typeLabel + '</span>' +
-      'Key: <code style="color:#a3a3a3;">' + k.key + '</code></div>' +
-      '<div class="key-text" style="color:' + codeColor + ';">' + k.recoveryCode + '</div>' +
-      '<div class="key-meta">' + formatExp(k.expiresAt) + ' • ' + k.note + '</div>' +
+    const statusClass = 'status-' + k.status;
+    const statusLabel = {
+      active: '🟢 ACTIVE',
+      burned: '💀 BURNED',
+      expired: '⏰ EXPIRED',
+      revoked: '🚫 REVOKED',
+      banned: '🚫 BANNED'
+    }[k.status] || k.status.toUpperCase();
+
+    const usedBadge = k.usedAt
+      ? '<span style="color:#6b6b6b;font-size:10px;">📅 Used: ' + formatDate(k.usedAt) + '</span>'
+      : '';
+    const burnedInfo = k.burnedAt
+      ? '<span style="color:#c77dff;font-size:10px;">💀 Burned: ' + formatDate(k.burnedAt) + '</span>'
+      : '';
+    const deviceInfo = k.deviceId
+      ? '<span style="color:#6b6b6b;font-size:10px;">📱 ' + k.deviceId.substring(0, 12) + '...</span>'
+      : '<span style="color:#6b6b6b;font-size:10px;">📱 Chưa gán</span>';
+
+    h += '<div class="key-item" style="flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:200px;">' +
+        '<div class="key-text">' + k.key + badge +
+          ' <span class="status-badge ' + statusClass + '">' + statusLabel + '</span>' +
+        '</div>' +
+        (hasRecovery
+          ? '<div class="key-meta" style="color:' + recoveryColor + ';">🆘 ' + k.recoveryCode + recoveryUsed + '</div>'
+          : '') +
+        '<div class="key-detail-row">' +
+          '<span><strong>Hết hạn:</strong> ' + formatDate(k.expiresAt) + '</span>' +
+          '<span><strong>Tạo:</strong> ' + formatDate(k.createdAt) + '</span>' +
+        '</div>' +
+        '<div class="key-detail-row">' +
+          deviceInfo + '<span>' + usedBadge + burnedInfo + '</span>' +
+        '</div>' +
+        (k.note ? '<div class="key-meta">📝 ' + k.note + '</div>' : '') +
       '</div>' +
-      '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')">Copy</button>' +
-      '</div>';
-  }
+      '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
+        '<button class="copy-btn" onclick="cp(\'' + k.key + '\')">📋 Key</button>' +
+        (hasRecovery ? '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')">🆘</button>' : '') +
+        '<button class="copy-btn" style="background:#5a1a1a;color:#ff8888;" onclick="doRevoke(\'' + k.key + '\')">🗑 Xoá</button>' +
+      '</div>' +
+    '</div>';
+  });
   l.innerHTML = h;
 }
 
-renderList();
-renderRecoveryList();
+function renderPagination(r) {
+  const p = document.getElementById('pagination');
+  const totalPages = Math.max(1, Math.ceil(r.total / PAGE_SIZE));
+  const cur = currentPage + 1;
+
+  let h = '';
+  h += '<button class="pagination-btn" ' + (currentPage === 0 ? 'disabled' : '') + ' onclick="goToPage(0)">⏮ Đầu</button>';
+  h += '<button class="pagination-btn" ' + (currentPage === 0 ? 'disabled' : '') + ' onclick="goToPage(' + (currentPage - 1) + ')">◀ Trước</button>';
+  h += '<span style="padding:6px 14px;color:#FFD700;font-weight:700;">Trang ' + cur + '/' + totalPages + '</span>';
+  h += '<button class="pagination-btn" ' + (!r.hasMore ? 'disabled' : '') + ' onclick="goToPage(' + (currentPage + 1) + ')">Sau ▶</button>';
+  h += '<button class="pagination-btn" ' + (cur === totalPages ? 'disabled' : '') + ' onclick="goToPage(' + (totalPages - 1) + ')">Cuối ⏭</button>';
+  p.innerHTML = h;
+}
+
+function goToPage(p) {
+  currentPage = Math.max(0, p);
+  loadKeys();
+}
+
+// Auto-load khi vào trang
+window.addEventListener('load', () => {
+  loadKeys();
+});
+
+// Search với debounce
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    let searchTimeout;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentPage = 0;
+        loadKeys();
+      }, 500);
+    });
+  }
+});
