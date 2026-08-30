@@ -168,9 +168,6 @@ function showNewKeys(keys) {
       formatExp(k.expiresAt) + ' | ' + k.note + '</div></div>';
 
     h += '<button class="btn" onclick="cp(\'' + k.key + '\')" style="margin-bottom:8px;">📋 Copy Key</button>';
-    if (hasRecovery && k.recoveryCode) {
-      h += '<button class="btn btn-secondary" onclick="cp(\'' + k.recoveryCode + '\')" style="margin-bottom:8px;">🆘 Copy Recovery</button>';
-    }
   });
   c.innerHTML = h;
 }
