@@ -1,4 +1,4 @@
-// NTA Shop Premium - Admin v3 (Fixed duplicate)
+// NTA Shop Premium - Admin v3.1 (with Single-Use Key + Recovery Code)
 const STORAGE_KEY = 'nta_generated_keys';
 const ADMIN_SECRET_KEY = 'nta_admin_secret';
 const API_URL = 'https://script.google.com/macros/s/AKfycbwCDI2Q2oKKP2cHTc_qdLoPtC-YIXBn0k6YkCFSvdBZcLeFBZdNMfgrXZoY45Duegtxow/exec';
@@ -44,9 +44,9 @@ function jsonp(params) {
   });
 }
 
-async function createKey(key, exp, note, secret) {
+async function createKey(key, exp, note, keyType, secret) {
   try {
-    return await jsonp({ action: 'create', key, expiresAt: exp || '', note, adminSecret: secret });
+    return await jsonp({ action: 'create', key, expiresAt: exp || '', note, keyType: keyType || 'multi', adminSecret: secret });
   } catch (e) {
     return { valid: false, message: e.message };
   }
@@ -90,11 +90,16 @@ async function generateKeys() {
   const secret = getSecret();
   if (!secret) { isGenerating = false; return; }
 
+  const keyType = document.getElementById('keyType').value;
   const dur = document.getElementById('duration').value;
   const cnt = parseInt(document.getElementById('count').value) || 1;
   const note = (document.getElementById('note').value || 'Created by admin').trim();
   const durMs = getDurationMs(dur);
 
+  // Confirm cho single-use key nếu tạo nhiều
+  if (keyType === 'single' && cnt > 10 && !confirm('Tạo ' + cnt + ' single-use key? Mỗi key chỉ dùng được 1 lần.')) {
+    isGenerating = false; return;
+  }
   if (cnt > 50 && !confirm('Tạo ' + cnt + ' key?')) { isGenerating = false; return; }
 
   const btn = document.getElementById('generateBtn');
@@ -109,10 +114,18 @@ async function generateKeys() {
     const key = genKey();
     btn.textContent = '⏳ ' + (i + 1) + '/' + cnt;
 
-    const r = await createKey(key, durMs, note, secret);
+    const r = await createKey(key, durMs, note, keyType, secret);
 
     if (r && r.valid) {
-      const kd = { key, createdAt: Date.now(), expiresAt: durMs ? Date.now() + durMs : null, duration: dur, note };
+      const kd = {
+        key,
+        keyType: r.keyType || keyType,
+        recoveryCode: r.recoveryCode || '',  // ← LƯU recovery code từ server
+        createdAt: Date.now(),
+        expiresAt: durMs ? Date.now() + durMs : null,
+        duration: dur,
+        note
+      };
       const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       arr.push(kd);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
@@ -131,7 +144,14 @@ async function generateKeys() {
 
   showNewKeys(newKeys);
   renderList();
-  alert('Xong!\nThành công: ' + ok + '\nThất bại: ' + fail);
+  renderRecoveryList();  // ← Render recovery list nếu có single-use key
+
+  // Alert khác nhau cho multi/single
+  if (keyType === 'single' && ok > 0) {
+    alert('✅ Xong!\nThành công: ' + ok + '\nThất bại: ' + fail + '\n\n🔥 Đã tạo ' + ok + ' single-use key.\nĐừng quên gửi kèm Recovery Code cho khách!');
+  } else {
+    alert('Xong!\nThành công: ' + ok + '\nThất bại: ' + fail);
+  }
 }
 
 function showNewKeys(keys) {
@@ -139,7 +159,27 @@ function showNewKeys(keys) {
   if (!keys.length) { c.innerHTML = ''; return; }
   let h = '<h3 style="color:#FFD700;margin-top:20px;font-size:14px;">Key mới tạo:</h3>';
   keys.forEach(k => {
-    h += '<div class="key-display">' + k.key + '<div style="font-size:11px;color:#6b6b6b;margin-top:6px;letter-spacing:0;font-weight:400;">' + formatExp(k.expiresAt) + ' | ' + k.note + '</div></div><button class="btn" onclick="cp(\'' + k.key + '\')" style="margin-bottom:8px;">📋 Copy</button>';
+    const isSingle = k.keyType === 'single';
+    const badge = isSingle
+      ? '<span style="background:#ff6b6b;color:#000;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">🔥 SINGLE</span>'
+      : '<span style="background:#4ecdc4;color:#000;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">🔄 MULTI</span>';
+
+    h += '<div class="key-display">' + k.key + badge +
+      '<div style="font-size:11px;color:#6b6b6b;margin-top:6px;letter-spacing:0;font-weight:400;">' +
+      formatExp(k.expiresAt) + ' | ' + k.note + '</div></div>';
+
+    // Single-use: hiển thị riêng recovery code
+    if (isSingle && k.recoveryCode) {
+      h += '<div style="background:#2a1a1a;border:1px solid #ff6b6b;border-radius:6px;padding:10px;margin-bottom:12px;">' +
+        '<div style="font-size:11px;color:#ff8888;margin-bottom:4px;font-weight:600;">🆘 RECOVERY CODE (gửi kèm cho khách):</div>' +
+        '<div style="font-family:SF Mono,Consolas,monospace;font-size:14px;color:#ff6b6b;font-weight:700;letter-spacing:1px;">' +
+        k.recoveryCode + '</div></div>';
+    }
+
+    h += '<button class="btn" onclick="cp(\'' + k.key + '\')" style="margin-bottom:8px;">📋 Copy Key</button>';
+    if (isSingle && k.recoveryCode) {
+      h += '<button class="btn btn-secondary" onclick="cp(\'' + k.recoveryCode + '\')" style="margin-bottom:8px;">🆘 Copy Recovery</button>';
+    }
   });
   c.innerHTML = h;
 }
@@ -173,9 +213,47 @@ function renderList() {
   let h = '';
   for (let i = keys.length - 1; i >= 0; i--) {
     const k = keys[i];
-    h += '<div class="key-item"><div style="flex:1;"><div class="key-text">' + k.key + '</div><div class="key-meta">' + formatExp(k.expiresAt) + ' • ' + k.note + '</div></div><button class="copy-btn" onclick="cp(\'' + k.key + '\')">Copy</button><button class="copy-btn" style="background:#5a1a1a;color:#ff8888;margin-left:4px;" onclick="doRevoke(\'' + k.key + '\')">Thu hồi</button></div>';
+    const isSingle = k.keyType === 'single';
+    const badge = isSingle
+      ? '<span style="background:#ff6b6b;color:#000;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-left:6px;">🔥 SINGLE</span>'
+      : '<span style="background:#4ecdc4;color:#000;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-left:6px;">🔄 MULTI</span>';
+    h += '<div class="key-item"><div style="flex:1;"><div class="key-text">' + k.key + badge + '</div>' +
+      (isSingle && k.recoveryCode ? '<div class="key-meta" style="color:#ff8888;">🆘 ' + k.recoveryCode + '</div>' : '') +
+      '<div class="key-meta">' + formatExp(k.expiresAt) + ' • ' + k.note + '</div></div>' +
+      '<button class="copy-btn" onclick="cp(\'' + k.key + '\')">Copy</button>' +
+      (isSingle && k.recoveryCode ? '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')" style="margin-left:4px;">🆘</button>' : '') +
+      '<button class="copy-btn" style="background:#5a1a1a;color:#ff8888;margin-left:4px;" onclick="doRevoke(\'' + k.key + '\')">Thu hồi</button></div>';
+  }
+  l.innerHTML = h;
+}
+
+// Render riêng danh sách recovery codes cho single-use key
+function renderRecoveryList() {
+  const keys = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const recoveryKeys = keys.filter(k => k.keyType === 'single' && k.recoveryCode);
+  const card = document.getElementById('recoveryCard');
+  const l = document.getElementById('recoveryList');
+
+  if (recoveryKeys.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+
+  let h = '';
+  for (let i = recoveryKeys.length - 1; i >= 0; i--) {
+    const k = recoveryKeys[i];
+    h += '<div class="key-item" style="border-left:3px solid #ff6b6b;">' +
+      '<div style="flex:1;">' +
+      '<div style="color:#6b6b6b;font-size:11px;margin-bottom:2px;">Key: <code style="color:#a3a3a3;">' + k.key + '</code></div>' +
+      '<div class="key-text" style="color:#ff6b6b;">' + k.recoveryCode + '</div>' +
+      '<div class="key-meta">' + formatExp(k.expiresAt) + ' • ' + k.note + '</div>' +
+      '</div>' +
+      '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')">Copy</button>' +
+      '</div>';
   }
   l.innerHTML = h;
 }
 
 renderList();
+renderRecoveryList();

@@ -145,6 +145,13 @@
     <div class="card">
       <h2>🔑 Tạo License Key mới</h2>
       <div class="form-group">
+        <label>Loại Key</label>
+        <select id="keyType">
+          <option value="single" selected>🔥 Single-use (Burn After Use + Recovery Code)</option>
+          <option value="multi">🔄 Multi-use (cho phép reset device)</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Thời hạn</label>
         <select id="duration">
           <option value="permanent">♾ Vĩnh viễn</option>
@@ -167,13 +174,25 @@
       <button class="btn btn-secondary" onclick="clearAdminSecret()">🔐 Đổi Admin Secret</button>
       <div id="generatedKeys"></div>
       <div class="info">
-        💡 <strong>Lưu ý:</strong> Key sẽ được tạo và lưu <strong>trực tiếp lên Google Sheet</strong>. Mỗi key chỉ dùng được trên <strong>1 thiết bị</strong>. Copy và gửi cho khách hàng.
+        💡 <strong>Lưu ý:</strong>
+        <ul style="margin: 6px 0 0 20px; padding: 0;">
+          <li><strong style="color:#ff6b6b;">🔥 Single-use</strong>: Key chỉ activate được <strong>1 lần duy nhất</strong>. Khi user verify lần đầu → key tự động bị "đốt". Mỗi key kèm 1 <strong>Recovery Code</strong> (cũng single-use) để reset device khi user format máy.</li>
+          <li><strong style="color:#4ecdc4;">🔄 Multi-use</strong>: Cho phép reset device nhiều lần bởi admin (logic cũ).</li>
+        </ul>
       </div>
     </div>
 
     <div class="card">
       <h2>📋 Danh sách Key đã tạo (Local)</h2>
       <div class="key-list" id="keyList"></div>
+    </div>
+
+    <div class="card" id="recoveryCard" style="display:none;">
+      <h2>🆘 Recovery Codes (Single-Use Keys)</h2>
+      <div class="info" style="margin-bottom: 12px;">
+        Gửi key + recovery code cho khách. Khi khách format máy, họ dùng recovery code để reset device. Mỗi recovery code chỉ dùng được <strong>1 lần duy nhất</strong>.
+      </div>
+      <div class="key-list" id="recoveryList"></div>
     </div>
   </div>
 
