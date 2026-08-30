@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NTA Shop Premium - Admin Key Generator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a0a;
+      background-image: radial-gradient(circle at 20% 0%, rgba(255,215,0,0.08) 0%, transparent 50%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header {
+      text-align: center;
+      padding: 30px 0;
+      border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 28px;
+      background: linear-gradient(135deg, #FFE57A, #FFD700, #D4AF37);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .header p { color: #a3a3a3; font-size: 14px; }
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      font-size: 18px;
+      color: #FFD700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-group { margin-bottom: 16px; }
+    label {
+      display: block;
+      color: #a3a3a3;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    select, input {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0a0a0a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      font-family: "SF Mono", Consolas, monospace;
+    }
+    select:focus, input:focus { outline: none; border-color: #FFD700; }
+    .btn {
+      background: linear-gradient(135deg, #FFD700, #D4AF37);
+      color: #0a0a0a;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-secondary {
+      background: #2a2a2a;
+      color: #FFD700;
+      margin-left: 8px;
+    }
+    .key-display {
+      background: #0a0a0a;
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: #FFD700;
+      text-align: center;
+      letter-spacing: 2px;
+      margin: 16px 0;
+      word-break: break-all;
+    }
+    .info {
+      background: rgba(255, 215, 0, 0.05);
+      border-left: 3px solid #FFD700;
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #a3a3a3;
+      margin-top: 16px;
+    }
+    .info strong { color: #FFD700; }
+    .key-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .key-item {
+      background: #0a0a0a;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 13px;
+    }
+    .key-item .key-text { color: #FFD700; font-weight: 600; }
+    .key-item .key-meta { color: #6b6b6b; font-size: 11px; }
+    .copy-btn {
+      background: #2a2a2a;
+      color: #FFD700;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⭐ NTA Shop Premium - Admin Panel</h1>
+      <p>License Key Generator & Manager</p>
+    </div>
+
+    <div class="card">
+      <h2>🔑 Tạo License Key mới</h2>
+      <div class="form-group">
+        <label>Thời hạn</label>
+        <select id="duration">
+          <option value="permanent">♾ Vĩnh viễn</option>
+          <option value="30">30 ngày</option>
+          <option value="90">90 ngày (3 tháng)</option>
+          <option value="180">180 ngày (6 tháng)</option>
+          <option value="365">365 ngày (1 năm)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Số lượng key</label>
+        <input type="number" id="count" value="1" min="1" max="100">
+      </div>
+      <div class="form-group">
+        <label>Ghi chú (tùy chọn)</label>
+        <input type="text" id="note" placeholder="VD: Khach VIP - Anh A">
+      </div>
+      <button class="btn" id="generateBtn" onclick="generateKeys()">✨ Tạo Key (lưu lên Google Sheet)</button>
+      <button class="btn btn-secondary" onclick="clearAll()">🗑 Xóa danh sách local</button>
+      <button class="btn btn-secondary" onclick="clearAdminSecret()">🔐 Đổi Admin Secret</button>
+      <div id="generatedKeys"></div>
+      <div class="info">
+        💡 <strong>Lưu ý:</strong> Key sẽ được tạo và lưu <strong>trực tiếp lên Google Sheet</strong>. Mỗi key chỉ dùng được trên <strong>1 thiết bị</strong>. Copy và gửi cho khách hàng.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Danh sách Key đã tạo (Local)</h2>
+      <div class="key-list" id="keyList"></div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
