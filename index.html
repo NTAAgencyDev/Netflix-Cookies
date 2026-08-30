@@ -147,7 +147,8 @@
       <div class="form-group">
         <label>Loại Key</label>
         <select id="keyType">
-          <option value="single" selected>🔥 Single-use (Burn After Use + Recovery Code)</option>
+          <option value="single-once" selected>💀 Single-Use-Only (Logout = chết key vĩnh viễn)</option>
+          <option value="single">🔥 Single-use (Burn After Use - cho phép refresh session)</option>
           <option value="multi">🔄 Multi-use (cho phép reset device)</option>
         </select>
       </div>
@@ -176,7 +177,8 @@
       <div class="info">
         💡 <strong>Lưu ý:</strong>
         <ul style="margin: 6px 0 0 20px; padding: 0;">
-          <li><strong style="color:#ff6b6b;">🔥 Single-use</strong>: Key chỉ activate được <strong>1 lần duy nhất</strong>. Khi user verify lần đầu → key tự động bị "đốt". Mỗi key kèm 1 <strong>Recovery Code</strong> (cũng single-use) để reset device khi user format máy.</li>
+          <li><strong style="color:#9d4edd;">💀 Single-Use-Only</strong>: User login → dùng → <strong>logout = key chết vĩnh viễn</strong> (kể cả cùng thiết bị cũng không vào lại được). Mỗi key kèm 1 Recovery Code để reset. <strong>Dùng cho bán lượt dùng 1 lần.</strong></li>
+          <li><strong style="color:#ff6b6b;">🔥 Single-use (Burn After Use)</strong>: User verify lần đầu → key burned, nhưng <strong>vẫn login lại được trên cùng thiết bị</strong> (chỉ cần deviceId trùng). Có Recovery Code để format máy.</li>
           <li><strong style="color:#4ecdc4;">🔄 Multi-use</strong>: Cho phép reset device nhiều lần bởi admin (logic cũ).</li>
         </ul>
       </div>

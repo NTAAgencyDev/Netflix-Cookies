@@ -1,4 +1,4 @@
-// NTA Shop Premium - Admin v3.1 (with Single-Use Key + Recovery Code)
+// NTA Shop Premium - Admin v3.2 (with Single-Use-Only Key)
 const STORAGE_KEY = 'nta_generated_keys';
 const ADMIN_SECRET_KEY = 'nta_admin_secret';
 const API_URL = 'https://script.google.com/macros/s/AKfycbwCDI2Q2oKKP2cHTc_qdLoPtC-YIXBn0k6YkCFSvdBZcLeFBZdNMfgrXZoY45Duegtxow/exec';
@@ -52,6 +52,21 @@ async function createKey(key, exp, note, keyType, secret) {
   }
 }
 
+// Helper: render badge theo keyType
+function getBadge(keyType, size) {
+  const sizes = size === 'sm'
+    ? { padding: '1px 5px', fontSize: '9px' }
+    : { padding: '2px 6px', fontSize: '10px' };
+
+  if (keyType === 'single-once') {
+    return `<span style="background:#9d4edd;color:#fff;padding:${sizes.padding};border-radius:4px;font-size:${sizes.fontSize};font-weight:700;margin-left:6px;">💀 ONE-SHOT</span>`;
+  }
+  if (keyType === 'single') {
+    return `<span style="background:#ff6b6b;color:#000;padding:${sizes.padding};border-radius:4px;font-size:${sizes.fontSize};font-weight:700;margin-left:6px;">🔥 SINGLE</span>`;
+  }
+  return `<span style="background:#4ecdc4;color:#000;padding:${sizes.padding};border-radius:4px;font-size:${sizes.fontSize};font-weight:700;margin-left:6px;">🔄 MULTI</span>`;
+}
+
 async function revokeKey(key, secret) {
   try {
     return await jsonp({ action: 'revoke', key, adminSecret: secret });
@@ -97,7 +112,7 @@ async function generateKeys() {
   const durMs = getDurationMs(dur);
 
   // Confirm cho single-use key nếu tạo nhiều
-  if (keyType === 'single' && cnt > 10 && !confirm('Tạo ' + cnt + ' single-use key? Mỗi key chỉ dùng được 1 lần.')) {
+  if ((keyType === 'single' || keyType === 'single-once') && cnt > 10 && !confirm('Tạo ' + cnt + ' ' + (keyType === 'single-once' ? 'Single-Use-Only' : 'single-use') + ' key? Mỗi key chỉ dùng được 1 lần.')) {
     isGenerating = false; return;
   }
   if (cnt > 50 && !confirm('Tạo ' + cnt + ' key?')) { isGenerating = false; return; }
@@ -146,8 +161,10 @@ async function generateKeys() {
   renderList();
   renderRecoveryList();  // ← Render recovery list nếu có single-use key
 
-  // Alert khác nhau cho multi/single
-  if (keyType === 'single' && ok > 0) {
+  // Alert khác nhau cho multi/single/single-once
+  if (keyType === 'single-once' && ok > 0) {
+    alert('✅ Xong!\nThành công: ' + ok + '\nThất bại: ' + fail + '\n\n💀 Đã tạo ' + ok + ' Single-Use-Only key.\nLogout = chết key. Gửi kèm Recovery Code!');
+  } else if (keyType === 'single' && ok > 0) {
     alert('✅ Xong!\nThành công: ' + ok + '\nThất bại: ' + fail + '\n\n🔥 Đã tạo ' + ok + ' single-use key.\nĐừng quên gửi kèm Recovery Code cho khách!');
   } else {
     alert('Xong!\nThành công: ' + ok + '\nThất bại: ' + fail);
@@ -159,25 +176,30 @@ function showNewKeys(keys) {
   if (!keys.length) { c.innerHTML = ''; return; }
   let h = '<h3 style="color:#FFD700;margin-top:20px;font-size:14px;">Key mới tạo:</h3>';
   keys.forEach(k => {
-    const isSingle = k.keyType === 'single';
-    const badge = isSingle
-      ? '<span style="background:#ff6b6b;color:#000;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">🔥 SINGLE</span>'
-      : '<span style="background:#4ecdc4;color:#000;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">🔄 MULTI</span>';
+    const hasRecovery = k.keyType === 'single' || k.keyType === 'single-once';
+    const badge = getBadge(k.keyType);
 
     h += '<div class="key-display">' + k.key + badge +
       '<div style="font-size:11px;color:#6b6b6b;margin-top:6px;letter-spacing:0;font-weight:400;">' +
       formatExp(k.expiresAt) + ' | ' + k.note + '</div></div>';
 
-    // Single-use: hiển thị riêng recovery code
-    if (isSingle && k.recoveryCode) {
-      h += '<div style="background:#2a1a1a;border:1px solid #ff6b6b;border-radius:6px;padding:10px;margin-bottom:12px;">' +
-        '<div style="font-size:11px;color:#ff8888;margin-bottom:4px;font-weight:600;">🆘 RECOVERY CODE (gửi kèm cho khách):</div>' +
-        '<div style="font-family:SF Mono,Consolas,monospace;font-size:14px;color:#ff6b6b;font-weight:700;letter-spacing:1px;">' +
+    // Hiển thị recovery code cho cả 2 loại single-use
+    if (hasRecovery && k.recoveryCode) {
+      const borderColor = k.keyType === 'single-once' ? '#9d4edd' : '#ff6b6b';
+      const labelColor = k.keyType === 'single-once' ? '#c77dff' : '#ff8888';
+      const codeColor = k.keyType === 'single-once' ? '#c77dff' : '#ff6b6b';
+      const warning = k.keyType === 'single-once'
+        ? '🚨 KEY NÀY DÙNG 1 LẦN DUY NHẤT - LOGOUT = CHẾT'
+        : '🆘 RECOVERY CODE (gửi kèm cho khách):';
+
+      h += '<div style="background:#1a1a2a;border:1px solid ' + borderColor + ';border-radius:6px;padding:10px;margin-bottom:12px;">' +
+        '<div style="font-size:11px;color:' + labelColor + ';margin-bottom:4px;font-weight:600;">' + warning + '</div>' +
+        '<div style="font-family:SF Mono,Consolas,monospace;font-size:14px;color:' + codeColor + ';font-weight:700;letter-spacing:1px;">' +
         k.recoveryCode + '</div></div>';
     }
 
     h += '<button class="btn" onclick="cp(\'' + k.key + '\')" style="margin-bottom:8px;">📋 Copy Key</button>';
-    if (isSingle && k.recoveryCode) {
+    if (hasRecovery && k.recoveryCode) {
       h += '<button class="btn btn-secondary" onclick="cp(\'' + k.recoveryCode + '\')" style="margin-bottom:8px;">🆘 Copy Recovery</button>';
     }
   });
@@ -213,24 +235,24 @@ function renderList() {
   let h = '';
   for (let i = keys.length - 1; i >= 0; i--) {
     const k = keys[i];
-    const isSingle = k.keyType === 'single';
-    const badge = isSingle
-      ? '<span style="background:#ff6b6b;color:#000;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-left:6px;">🔥 SINGLE</span>'
-      : '<span style="background:#4ecdc4;color:#000;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-left:6px;">🔄 MULTI</span>';
+    const hasRecovery = k.keyType === 'single' || k.keyType === 'single-once';
+    const badge = getBadge(k.keyType, 'sm');
+    const recoveryColor = k.keyType === 'single-once' ? '#c77dff' : '#ff8888';
+
     h += '<div class="key-item"><div style="flex:1;"><div class="key-text">' + k.key + badge + '</div>' +
-      (isSingle && k.recoveryCode ? '<div class="key-meta" style="color:#ff8888;">🆘 ' + k.recoveryCode + '</div>' : '') +
+      (hasRecovery && k.recoveryCode ? '<div class="key-meta" style="color:' + recoveryColor + ';">🆘 ' + k.recoveryCode + '</div>' : '') +
       '<div class="key-meta">' + formatExp(k.expiresAt) + ' • ' + k.note + '</div></div>' +
       '<button class="copy-btn" onclick="cp(\'' + k.key + '\')">Copy</button>' +
-      (isSingle && k.recoveryCode ? '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')" style="margin-left:4px;">🆘</button>' : '') +
+      (hasRecovery && k.recoveryCode ? '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')" style="margin-left:4px;">🆘</button>' : '') +
       '<button class="copy-btn" style="background:#5a1a1a;color:#ff8888;margin-left:4px;" onclick="doRevoke(\'' + k.key + '\')">Thu hồi</button></div>';
   }
   l.innerHTML = h;
 }
 
-// Render riêng danh sách recovery codes cho single-use key
+// Render riêng danh sách recovery codes cho single-use key (cả single và single-once)
 function renderRecoveryList() {
   const keys = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  const recoveryKeys = keys.filter(k => k.keyType === 'single' && k.recoveryCode);
+  const recoveryKeys = keys.filter(k => (k.keyType === 'single' || k.keyType === 'single-once') && k.recoveryCode);
   const card = document.getElementById('recoveryCard');
   const l = document.getElementById('recoveryList');
 
@@ -243,10 +265,17 @@ function renderRecoveryList() {
   let h = '';
   for (let i = recoveryKeys.length - 1; i >= 0; i--) {
     const k = recoveryKeys[i];
-    h += '<div class="key-item" style="border-left:3px solid #ff6b6b;">' +
+    const isOnce = k.keyType === 'single-once';
+    const borderColor = isOnce ? '#9d4edd' : '#ff6b6b';
+    const codeColor = isOnce ? '#c77dff' : '#ff6b6b';
+    const typeLabel = isOnce ? '💀 ONE-SHOT' : '🔥 SINGLE';
+
+    h += '<div class="key-item" style="border-left:3px solid ' + borderColor + ';">' +
       '<div style="flex:1;">' +
-      '<div style="color:#6b6b6b;font-size:11px;margin-bottom:2px;">Key: <code style="color:#a3a3a3;">' + k.key + '</code></div>' +
-      '<div class="key-text" style="color:#ff6b6b;">' + k.recoveryCode + '</div>' +
+      '<div style="color:#6b6b6b;font-size:11px;margin-bottom:2px;">' +
+      '<span style="background:' + borderColor + ';color:#000;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-right:6px;">' + typeLabel + '</span>' +
+      'Key: <code style="color:#a3a3a3;">' + k.key + '</code></div>' +
+      '<div class="key-text" style="color:' + codeColor + ';">' + k.recoveryCode + '</div>' +
       '<div class="key-meta">' + formatExp(k.expiresAt) + ' • ' + k.note + '</div>' +
       '</div>' +
       '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')">Copy</button>' +
