@@ -1,4 +1,4 @@
-// NTA Shop Premium - Admin v3.3 (Sheet-based management, delete-on-revoke)
+// NTA Shop Premium - Admin v3.4 (fix clearSecret + cache busting)
 const ADMIN_SECRET_KEY = 'nta_admin_secret';
 const API_URL = 'https://script.google.com/macros/s/AKfycbwCDI2Q2oKKP2cHTc_qdLoPtC-YIXBn0k6YkCFSvdBZcLeFBZdNMfgrXZoY45Duegtxow/exec';
 
