@@ -146,7 +146,7 @@
       margin-left: 6px;
     }
     .status-active { background: #1a4a1a; color: #4ade80; }
-    .status-burned { background: #4a1a4a; color: #c77dff; }
+    .status-used { background: #4a1a1a; color: #ff8888; }
     .status-expired { background: #4a3a1a; color: #fbbf24; }
     .status-revoked { background: #4a1a1a; color: #ff8888; }
     .key-detail-row {
@@ -189,19 +189,8 @@
       <div class="form-group">
         <label>Loại Key</label>
         <select id="keyType">
-          <option value="single-once" selected>💀 Single-Use-Only (Logout = chết key vĩnh viễn)</option>
-          <option value="single">🔥 Single-use (Burn After Use - cho phép refresh session)</option>
-          <option value="multi">🔄 Multi-use (cho phép reset device)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Thời hạn</label>
-        <select id="duration">
-          <option value="permanent">♾ Vĩnh viễn</option>
-          <option value="30">30 ngày</option>
-          <option value="90">90 ngày (3 tháng)</option>
-          <option value="180">180 ngày (6 tháng)</option>
-          <option value="365">365 ngày (1 năm)</option>
+          <option value="30d" selected>⭐ Premium 30 ngày (dùng nhiều lần trong 30 ngày)</option>
+          <option value="once">🔥 Dùng 1 lần (auto-burn sau khi inject thành công)</option>
         </select>
       </div>
       <div class="form-group">
@@ -219,9 +208,8 @@
       <div class="info">
         💡 <strong>Lưu ý:</strong>
         <ul style="margin: 6px 0 0 20px; padding: 0;">
-          <li><strong style="color:#9d4edd;">💀 Single-Use-Only</strong>: User login → dùng → <strong>logout = key chết vĩnh viễn</strong> (kể cả cùng thiết bị cũng không vào lại được). Mỗi key kèm 1 Recovery Code để reset. <strong>Dùng cho bán lượt dùng 1 lần.</strong></li>
-          <li><strong style="color:#ff6b6b;">🔥 Single-use (Burn After Use)</strong>: User verify lần đầu → key burned, nhưng <strong>vẫn login lại được trên cùng thiết bị</strong> (chỉ cần deviceId trùng). Có Recovery Code để format máy.</li>
-          <li><strong style="color:#4ecdc4;">🔄 Multi-use</strong>: Cho phép reset device nhiều lần bởi admin (logic cũ).</li>
+          <li><strong style="color:#10b981;">⭐ Premium 30 ngày</strong>: Khách dùng nhiều lần, inject lại tùy thích. Sau 30 ngày tự hết hạn.</li>
+          <li><strong style="color:#ff6b6b;">🔥 Dùng 1 lần</strong>: Inject thành công → key tự hủy. Inject thất bại → key vẫn dùng lại được.</li>
         </ul>
       </div>
     </div>
@@ -231,14 +219,13 @@
       <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <select id="filterKeyType" style="flex:1;min-width:120px;">
           <option value="">Tất cả loại</option>
-          <option value="multi">🔄 Multi</option>
-          <option value="single">🔥 Single</option>
-          <option value="single-once">💀 One-Shot</option>
+          <option value="30d">⭐ 30 ngày</option>
+          <option value="once">🔥 Dùng 1 lần</option>
         </select>
         <select id="filterStatus" style="flex:1;min-width:120px;">
           <option value="">Tất cả trạng thái</option>
           <option value="active">🟢 Active</option>
-          <option value="burned">💀 Burned</option>
+          <option value="used">🔥 Used</option>
           <option value="expired">⏰ Expired</option>
           <option value="revoked">🚫 Revoked</option>
         </select>

@@ -1,4 +1,4 @@
-// NTA Shop Premium - Admin v3.4 (fix clearSecret + cache busting)
+const NTA_ADMIN_VERSION = '4.0.0';
 const ADMIN_SECRET_KEY = 'nta_admin_secret';
 const API_URL = 'https://script.google.com/macros/s/AKfycbwCDI2Q2oKKP2cHTc_qdLoPtC-YIXBn0k6YkCFSvdBZcLeFBZdNMfgrXZoY45Duegtxow/exec';
 
@@ -13,13 +13,8 @@ function genKey() {
   return 'NTA-' + genSegment() + '-' + genSegment() + '-' + genSegment() + '-' + genSegment();
 }
 
-function getDurationMs(d) {
-  if (d === 'permanent') return null;
-  return parseInt(d) * 86400000;
-}
-
 function formatExp(t) {
-  if (!t) return 'Vĩnh viễn';
+  if (!t) return '—';
   return new Date(t).toLocaleDateString('vi-VN');
 }
 
@@ -51,25 +46,21 @@ function jsonp(params) {
 
 async function createKey(key, exp, note, keyType, secret) {
   try {
-    return await jsonp({ action: 'create', key, expiresAt: exp || '', note, keyType: keyType || 'multi', adminSecret: secret });
+    return await jsonp({ action: 'create', key, expiresAt: exp || '', note, keyType: keyType || '30d', adminSecret: secret });
   } catch (e) {
     return { valid: false, message: e.message };
   }
 }
 
-// Helper: render badge theo keyType
 function getBadge(keyType, size) {
   const sizes = size === 'sm'
     ? { padding: '1px 5px', fontSize: '9px' }
     : { padding: '2px 6px', fontSize: '10px' };
 
-  if (keyType === 'single-once') {
-    return `<span style="background:#9d4edd;color:#fff;padding:${sizes.padding};border-radius:4px;font-size:${sizes.fontSize};font-weight:700;margin-left:6px;">💀 ONE-SHOT</span>`;
+  if (keyType === 'once') {
+    return `<span style="background:linear-gradient(135deg,#ff6b6b,#ffa500);color:#fff;padding:${sizes.padding};border-radius:4px;font-size:${sizes.fontSize};font-weight:700;margin-left:6px;">🔥 DÙNG 1 LẦN</span>`;
   }
-  if (keyType === 'single') {
-    return `<span style="background:#ff6b6b;color:#000;padding:${sizes.padding};border-radius:4px;font-size:${sizes.fontSize};font-weight:700;margin-left:6px;">🔥 SINGLE</span>`;
-  }
-  return `<span style="background:#4ecdc4;color:#000;padding:${sizes.padding};border-radius:4px;font-size:${sizes.fontSize};font-weight:700;margin-left:6px;">🔄 MULTI</span>`;
+  return `<span style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:${sizes.padding};border-radius:4px;font-size:${sizes.fontSize};font-weight:700;margin-left:6px;">⭐ 30 NGÀY</span>`;
 }
 
 async function revokeKey(key, secret) {
@@ -100,7 +91,6 @@ function clearSecret() {
 let isGenerating = false; // Flag chống double-click
 
 async function generateKeys() {
-  // CHỐNG GỌI 2 LẦN
   if (isGenerating) {
     console.warn('Already generating, ignoring...');
     return;
@@ -111,13 +101,10 @@ async function generateKeys() {
   if (!secret) { isGenerating = false; return; }
 
   const keyType = document.getElementById('keyType').value;
-  const dur = document.getElementById('duration').value;
   const cnt = parseInt(document.getElementById('count').value) || 1;
   const note = (document.getElementById('note').value || 'Created by admin').trim();
-  const durMs = getDurationMs(dur);
 
-  // Confirm cho single-use key nếu tạo nhiều
-  if ((keyType === 'single' || keyType === 'single-once') && cnt > 10 && !confirm('Tạo ' + cnt + ' ' + (keyType === 'single-once' ? 'Single-Use-Only' : 'single-use') + ' key? Mỗi key chỉ dùng được 1 lần.')) {
+  if (keyType === 'once' && cnt > 10 && !confirm('Tạo ' + cnt + ' key dùng 1 lần? Mỗi key chỉ dùng được 1 lần duy nhất.')) {
     isGenerating = false; return;
   }
   if (cnt > 50 && !confirm('Tạo ' + cnt + ' key?')) { isGenerating = false; return; }
@@ -134,15 +121,13 @@ async function generateKeys() {
     const key = genKey();
     btn.textContent = '⏳ ' + (i + 1) + '/' + cnt;
 
-    const r = await createKey(key, durMs, note, keyType, secret);
+    const r = await createKey(key, null, note, keyType, secret);
 
     if (r && r.valid) {
       const kd = {
         key,
         keyType: r.keyType || keyType,
-        recoveryCode: r.recoveryCode || '',
-        expiresAt: durMs ? Date.now() + durMs : null,
-        duration: dur,
+        expiresAt: r.expiresAt || (keyType === '30d' ? Date.now() + 30 * 24 * 60 * 60 * 1000 : null),
         note
       };
       newKeys.push(kd);
@@ -156,18 +141,16 @@ async function generateKeys() {
 
   btn.disabled = false;
   btn.textContent = oldText;
-  isGenerating = false; // Reset flag
+  isGenerating = false;
 
   showNewKeys(newKeys);
-  // Sau khi tạo xong, refresh danh sách từ Google Sheet
   currentPage = 0;
   loadKeys();
 
-  // Alert khác nhau cho multi/single/single-once
-  if (keyType === 'single-once' && ok > 0) {
-    alert('✅ Xong!\nThành công: ' + ok + '\nThất bại: ' + fail + '\n\n💀 Đã tạo ' + ok + ' Single-Use-Only key.\nLogout = chết key. Gửi kèm Recovery Code!');
-  } else if (keyType === 'single' && ok > 0) {
-    alert('✅ Xong!\nThành công: ' + ok + '\nThất bại: ' + fail + '\n\n🔥 Đã tạo ' + ok + ' single-use key.\nĐừng quên gửi kèm Recovery Code cho khách!');
+  if (keyType === 'once' && ok > 0) {
+    alert('✅ Xong!\nThành công: ' + ok + '\nThất bại: ' + fail + '\n\n🔥 Đã tạo ' + ok + ' key dùng 1 lần.\nKey sẽ tự hủy sau khi khách inject thành công.');
+  } else if (keyType === '30d' && ok > 0) {
+    alert('✅ Xong!\nThành công: ' + ok + '\nThất bại: ' + fail + '\n\n⭐ Đã tạo ' + ok + ' key Premium 30 ngày.');
   } else {
     alert('Xong!\nThành công: ' + ok + '\nThất bại: ' + fail);
   }
@@ -178,27 +161,11 @@ function showNewKeys(keys) {
   if (!keys.length) { c.innerHTML = ''; return; }
   let h = '<h3 style="color:#FFD700;margin-top:20px;font-size:14px;">Key mới tạo:</h3>';
   keys.forEach(k => {
-    const hasRecovery = k.keyType === 'single' || k.keyType === 'single-once';
     const badge = getBadge(k.keyType);
 
     h += '<div class="key-display">' + k.key + badge +
       '<div style="font-size:11px;color:#6b6b6b;margin-top:6px;letter-spacing:0;font-weight:400;">' +
       formatExp(k.expiresAt) + ' | ' + k.note + '</div></div>';
-
-    // Hiển thị recovery code cho cả 2 loại single-use
-    if (hasRecovery && k.recoveryCode) {
-      const borderColor = k.keyType === 'single-once' ? '#9d4edd' : '#ff6b6b';
-      const labelColor = k.keyType === 'single-once' ? '#c77dff' : '#ff8888';
-      const codeColor = k.keyType === 'single-once' ? '#c77dff' : '#ff6b6b';
-      const warning = k.keyType === 'single-once'
-        ? '🚨 KEY NÀY DÙNG 1 LẦN DUY NHẤT - LOGOUT = CHẾT'
-        : '🆘 RECOVERY CODE (gửi kèm cho khách):';
-
-      h += '<div style="background:#1a1a2a;border:1px solid ' + borderColor + ';border-radius:6px;padding:10px;margin-bottom:12px;">' +
-        '<div style="font-size:11px;color:' + labelColor + ';margin-bottom:4px;font-weight:600;">' + warning + '</div>' +
-        '<div style="font-family:SF Mono,Consolas,monospace;font-size:14px;color:' + codeColor + ';font-weight:700;letter-spacing:1px;">' +
-        k.recoveryCode + '</div></div>';
-    }
 
     h += '<button class="btn" onclick="cp(\'' + k.key + '\')" style="margin-bottom:8px;">📋 Copy Key</button>';
     if (hasRecovery && k.recoveryCode) {
@@ -235,9 +202,6 @@ function clearAll() {
   alert('Đã xóa danh sách key mới tạo trên màn hình.\n(Danh sách key trong Google Sheet vẫn nguyên.)');
 }
 
-// ============================================
-// v3.3: QUẢN LÝ KEY TỪ GOOGLE SHEET
-// ============================================
 let currentPage = 0;
 const PAGE_SIZE = 20;
 let currentFilters = { keyType: '', status: '', search: '' };
@@ -296,24 +260,18 @@ function renderKeyList(r) {
   let h = '';
   r.keys.forEach(k => {
     const badge = getBadge(k.keyType, 'sm');
-    const hasRecovery = (k.keyType === 'single' || k.keyType === 'single-once') && k.recoveryCode;
-    const recoveryColor = k.keyType === 'single-once' ? '#c77dff' : '#ff8888';
-    const recoveryUsed = k.recoveryUsedAt ? ' <span style="color:#fbbf24;">(đã dùng)</span>' : '';
 
     const statusClass = 'status-' + k.status;
     const statusLabel = {
       active: '🟢 ACTIVE',
-      burned: '💀 BURNED',
+      used: '🔥 USED',
       expired: '⏰ EXPIRED',
       revoked: '🚫 REVOKED',
       banned: '🚫 BANNED'
     }[k.status] || k.status.toUpperCase();
 
     const usedBadge = k.usedAt
-      ? '<span style="color:#6b6b6b;font-size:10px;">📅 Used: ' + formatDate(k.usedAt) + '</span>'
-      : '';
-    const burnedInfo = k.burnedAt
-      ? '<span style="color:#c77dff;font-size:10px;">💀 Burned: ' + formatDate(k.burnedAt) + '</span>'
+      ? '<span style="color:#ff8888;font-size:10px;">🔥 Used: ' + formatDate(k.usedAt) + '</span>'
       : '';
     const deviceInfo = k.deviceId
       ? '<span style="color:#6b6b6b;font-size:10px;">📱 ' + k.deviceId.substring(0, 12) + '...</span>'
@@ -324,21 +282,17 @@ function renderKeyList(r) {
         '<div class="key-text">' + k.key + badge +
           ' <span class="status-badge ' + statusClass + '">' + statusLabel + '</span>' +
         '</div>' +
-        (hasRecovery
-          ? '<div class="key-meta" style="color:' + recoveryColor + ';">🆘 ' + k.recoveryCode + recoveryUsed + '</div>'
-          : '') +
         '<div class="key-detail-row">' +
           '<span><strong>Hết hạn:</strong> ' + formatDate(k.expiresAt) + '</span>' +
           '<span><strong>Tạo:</strong> ' + formatDate(k.createdAt) + '</span>' +
         '</div>' +
         '<div class="key-detail-row">' +
-          deviceInfo + '<span>' + usedBadge + burnedInfo + '</span>' +
+          deviceInfo + '<span>' + usedBadge + '</span>' +
         '</div>' +
         (k.note ? '<div class="key-meta">📝 ' + k.note + '</div>' : '') +
       '</div>' +
       '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
         '<button class="copy-btn" onclick="cp(\'' + k.key + '\')">📋 Key</button>' +
-        (hasRecovery ? '<button class="copy-btn" onclick="cp(\'' + k.recoveryCode + '\')">🆘</button>' : '') +
         '<button class="copy-btn" style="background:#5a1a1a;color:#ff8888;" onclick="doRevoke(\'' + k.key + '\')">🗑 Xoá</button>' +
       '</div>' +
     '</div>';
@@ -365,12 +319,10 @@ function goToPage(p) {
   loadKeys();
 }
 
-// Auto-load khi vào trang
 window.addEventListener('load', () => {
   loadKeys();
 });
 
-// Search với debounce
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
