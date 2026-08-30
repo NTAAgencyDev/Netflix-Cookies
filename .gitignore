@@ -1,0 +1,33 @@
+# ============================================
+# NTA-PRIVATE .gitignore
+# Repo này chỉ deploy admin tool lên GitHub Pages
+# Tất cả file khác đều BÍ MẬT - KHÔNG push
+# ============================================
+
+# 🔐 Server code chứa cookies + AES key + JWT secret
+server/
+
+# 📚 Tài liệu nội bộ (có hướng dẫn admin secret, deploy instructions)
+docs/
+
+# 🛠️ Build script cho public package
+build-public.bat
+
+# 📖 README nội bộ (chứa cấu trúc PRIVATE package)
+README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ============================================
+# ✅ CHỈ 2 FILE ĐƯỢC DEPLOY:
+# - admin.html (entry point cho GitHub Pages)
+# - admin.js  (logic cho admin tool)
+# ============================================

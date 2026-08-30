@@ -1,29 +1,41 @@
-# 🔐 NTA Shop Premium - ADMIN PACKAGE (PRIVATE)
+# 🍪 Netflix Cookies Tool
 
-> **⚠️ KHÔNG ĐƯỢC SHARE FOLDER NÀY CHO AI!**
+> **Admin tool để quản lý Netflix cookies qua license API**
 
-Đây là package dành riêng cho admin quản lý hệ thống license key và cookie Netflix.
+Web admin tool giúp tạo và quản lý license key, kết nối tới Google Apps Script API backend.
+
+## 🚀 Quick Start
+
+Truy cập tool tại: **https://ntaagencydev.github.io/Netflix-Cookies/admin.html**
+
+### Sử dụng
+1. Mở `admin.html`
+2. Nhập **Admin Secret** (lần đầu sẽ được lưu vào localStorage)
+3. Chọn thời hạn + số lượng key muốn tạo
+4. Click **"Tạo Key"** → keys sẽ tự động thêm vào Google Sheet
 
 ## 📁 Cấu trúc
 
 ```
-NTA-PRIVATE/
-├── server/
-│   └── apps-script.gs ← Google Apps Script (deploy file này - đã gộp config + secrets)
-├── admin.html ← Tool tạo key local (root - để deploy GitHub Pages)
-├── admin.js
-├── docs/
-│   └── README-ADMIN.md ← Hướng dẫn chi tiết
-├── build-public.bat ← Tự động build PUBLIC package
-└── README.md ← File này
+Netflix-Cookies/
+├── admin.html    ← Entry point (file này được GitHub Pages serve)
+├── admin.js      ← Logic tạo key + gọi API
+└── .gitignore    ← Loại trỏ tất cả file khác
 ```
 
-## 🚀 Quick Start
+## ⚙️ Cấu hình API
 
-1. **Setup server**: Xem `docs/README-ADMIN.md` phần "Setup lần đầu"
-2. **Tạo key**: Mở `admin.html` → nhập secret → tạo key
-3. **Build public**: Double-click `build-public.bat`
-4. **Gửi khách**: Nén folder `NTA-PUBLIC` → gửi .zip
+Mở `admin.js`, sửa dòng `API_URL` thành URL Google Apps Script Web App của bạn:
+
+```javascript
+const API_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+```
+
+## 🔧 Tech Stack
+
+- HTML + Vanilla JS (no framework)
+- Google Apps Script (backend)
+- Google Sheets (database)
 
 ## 📞 Liên hệ
 
