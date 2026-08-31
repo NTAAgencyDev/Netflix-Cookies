@@ -71,6 +71,14 @@ async function revokeKey(key, secret) {
   }
 }
 
+async function resetDeviceKey(key, secret) {
+  try {
+    return await jsonp({ action: 'resetDevice', key, adminSecret: secret });
+  } catch (e) {
+    return { valid: false, message: e.message };
+  }
+}
+
 function getSecret() {
   let s = localStorage.getItem(ADMIN_SECRET_KEY);
   if (!s) {
@@ -194,6 +202,19 @@ async function doRevoke(key) {
   }
 }
 
+async function doResetDevice(key) {
+  const fullKey = String(key).trim().toUpperCase();
+  if (!confirm('📱 Reset device cho key:\n' + fullKey + '\n\nUser sẽ có thể kích hoạt lại trên máy mới.\nKey vẫn còn hiệu lực, chỉ xoá deviceId.\n\nTiếp tục?')) return;
+  const s = getSecret(); if (!s) return;
+  const r = await resetDeviceKey(fullKey, s);
+  if (r && r.valid) {
+    alert('✅ ' + r.message + (r.oldDeviceId ? '\n\nDevice cũ: ' + r.oldDeviceId : ''));
+    loadKeys();
+  } else {
+    alert('❌ Lỗi: ' + (r ? r.message : 'unknown'));
+  }
+}
+
 function clearAll() {
   document.getElementById('generatedKeys').innerHTML = '';
   alert('Đã xóa danh sách key mới tạo trên màn hình.\n(Danh sách key trong Google Sheet vẫn nguyên.)');
@@ -290,6 +311,7 @@ function renderKeyList(r) {
       '</div>' +
       '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
         '<button class="copy-btn" onclick="cp(\'' + k.key + '\')">📋 Key</button>' +
+        '<button class="copy-btn" style="background:#1a3a5a;color:#88c0ff;' + (k.deviceId ? '' : 'opacity:0.4;cursor:not-allowed;') + '" onclick="doResetDevice(\'' + k.key + '\')"' + (k.deviceId ? '' : ' disabled title="Key chưa gán device nào"') + '>📱 Reset</button>' +
         '<button class="copy-btn" style="background:#5a1a1a;color:#ff8888;" onclick="doRevoke(\'' + k.key + '\')">🗑 Xoá</button>' +
       '</div>' +
     '</div>';
